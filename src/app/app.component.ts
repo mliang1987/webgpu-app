@@ -11,6 +11,7 @@ export class AppComponent implements OnInit, AfterViewInit {
   device: GPUDevice | null = null;
   context: GPUCanvasContext | null = null;
   canvasFormat: GPUTextureFormat | null = null;
+  encoder: GPUCommandEncoder | null = null;
 
   ngAfterViewInit() {}
 
@@ -40,11 +41,25 @@ export class AppComponent implements OnInit, AfterViewInit {
                 console.log('GPU Canvas Context:', this.context);
                 this.canvasFormat = navigator.gpu.getPreferredCanvasFormat();
                 console.log('Canvas format:', this.canvasFormat);
-
                 this.context.configure({
                   device: this.device,
                   format: this.canvasFormat
                 });
+                this.encoder = this.device.createCommandEncoder();
+                const pass = this.encoder.beginRenderPass({
+                  colorAttachments: [
+                    {
+                      view: this.context.getCurrentTexture().createView(),
+                      loadOp: 'clear',
+                      clearValue: [1, 0, 1, 1],
+                      storeOp: 'store'
+                    }
+                  ]
+                });
+                pass.end();
+                const commandBuffer = this.encoder.finish();
+                this.device.queue.submit([commandBuffer]);
+                this.device.queue.submit([this.encoder.finish()]);
               } else {
                 console.error('Failed to initialize GPU Device.');
               }
